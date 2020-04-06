@@ -116,7 +116,7 @@ fi
 __contps()
 {
     if [ "$(which docker)" ] || [ "$(which kubectl)" ]; then
-        if [ -f /home/$USER/.kube/config ] || [ -f /home/$USER/.docker/config.json ]; then
+        if [ -f $HOME/.kube/config ] || [ -f $HOME/.docker/config.json ]; then
             KUBECC="/home/$USER/.kube/config"
             DOCKCC="/home/$USER/.docker/config.json"
             k8sco=$(awk '{print $2}'<<< $(grep current-context $KUBECC))
