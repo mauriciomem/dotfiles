@@ -43,7 +43,7 @@ esac
 # uncomment for a colored prompt, if the terminal has the capability; turned
 # off by default to not distract the user: the focus in a terminal window
 # should be on the output of commands, not on the prompt
-#force_color_prompt=yes
+force_color_prompt=yes
 
 if [ -n "$force_color_prompt" ]; then
     if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
@@ -57,10 +57,14 @@ if [ -n "$force_color_prompt" ]; then
 fi
 
 if [ "$color_prompt" = yes ]; then
-  PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u \[\033[00m\]at \[\033[01;34m\]\h \[\033[00m\]in \[\033[01;31m\]\w\[\033[00m\] $(__contps): \n$ '
+  PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u ' 
+  PS1+='\[\033[00m\]at \[\033[01;34m\]\h\[\033[00m\] in ' 
+  PS1+='\[\033[01;31m\]\w\[\033[00m\] $(__contps): \n$ '
 
 else
-  PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u \[\033[00m\]at \[\033[01;34m\]\h \[\033[00m\]in \[\033[01;31m\]\w\[\033[00m\] $(__contps): \n$ '
+  PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u ' 
+  PS1+='\[\033[00m\]at \[\033[01;34m\]\h\[\033[00m\] in ' 
+  PS1+='\[\033[01;31m\]\w\[\033[00m\] $(__contps): \n$ '
 fi
 unset color_prompt force_color_prompt
 
@@ -117,11 +121,19 @@ __contps()
 {
     if [ "$(which docker)" ] || [ "$(which kubectl)" ]; then
         if [ -f $HOME/.kube/config ] || [ -f $HOME/.docker/config.json ]; then
-            KUBECC="/home/$USER/.kube/config"
-            DOCKCC="/home/$USER/.docker/config.json"
+            KUBECC="$HOME/.kube/config"
+            DOCKCC="$HOME/.docker/config.json"
             k8sco=$(awk '{print $2}'<<< $(grep current-context $KUBECC))
             swmco=$(awk '{print $2}'<<< $(grep currentContext $DOCKCC) | tr -d '"')
             echo -e "(k:\e[36m${k8sco:-\e[33m*}\e[0m|s:\e[36m${swmco:-\e[33m*}\e[0m)"
         fi
     fi
 }
+
+for file in ~/.{bash_prompt,aliases}; do
+	if [[ -r "$file" ]] && [[ -f "$file" ]]; then
+		# shellcheck source=/dev/null
+		source "$file"
+	fi
+done
+unset file
