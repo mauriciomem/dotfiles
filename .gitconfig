@@ -1,0 +1,27 @@
+[user]
+	name = mauriciomem
+	email = mauriciomem@gmail.com
+[core]
+
+	# Use custom `.gitignore` and `.gitattributes`
+	excludesfile = ~/.gitignore
+	attributesfile = ~/.gitattributes
+	editor = vim
+	whitespace = space-before-tab,-indent-with-non-tab,trailing-space
+[color]
+	# Use colors in Git commands that are capable of colored output when
+	# outputting to the terminal. (This is the default setting in Git ≥ 1.8.4.)
+	ui = auto
+[color "diff"]
+	meta = yellow bold
+	frag = magenta bold # line info
+	old = red # deletions
+	new = green # additions
+[color "status"]
+	added = yellow
+	changed = green
+	untracked = cyan
+
+[diff]
+[help]
+[merge]
