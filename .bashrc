@@ -1,6 +1,10 @@
 # ~/.bashrc: executed by bash(1) for non-login shells.
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
 # for examples
+# We use preexec and precmd hook functions for Bash
+# If you have anything that's using the Debug Trap or PROMPT_COMMAND 
+# change it to use preexec or precmd
+# See also https://github.com/rcaloras/bash-preexec
 
 # If not running interactively, don't do anything
 case $- in
@@ -16,8 +20,8 @@ HISTCONTROL=ignoreboth
 shopt -s histappend
 
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=1000
-HISTFILESIZE=2000
+HISTSIZE=2000
+HISTFILESIZE=3000
 
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
@@ -28,7 +32,7 @@ shopt -s checkwinsize
 #shopt -s globstar
 
 # make less more friendly for non-text input files, see lesspipe(1)
-#[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
@@ -57,32 +61,18 @@ if [ -n "$force_color_prompt" ]; then
 fi
 
 if [ "$color_prompt" = yes ]; then
-  PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u ' 
-  PS1+='\[\033[00m\]at \[\033[01;34m\]\h\[\033[00m\] in ' 
-  PS1+='\[\033[01;31m\]\w\[\033[00m\] $(__contps): \n$ '
-
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 else
-  PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u ' 
-  PS1+='\[\033[00m\]at \[\033[01;34m\]\h\[\033[00m\] in ' 
-  PS1+='\[\033[01;31m\]\w\[\033[00m\] $(__contps): \n$ '
+    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
 fi
 unset color_prompt force_color_prompt
-
-# If this is an xterm set the title to user@host:dir
-case "$TERM" in
-xterm*|rxvt*)
-    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
-    ;;
-*)
-    ;;
-esac
 
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
     test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
     alias ls='ls --color=auto'
-    alias dir='dir --color=auto'
-    alias vdir='vdir --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
 
     alias grep='grep --color=auto'
     alias fgrep='fgrep --color=auto'
@@ -90,21 +80,16 @@ if [ -x /usr/bin/dircolors ]; then
 fi
 
 # colored GCC warnings and errors
-#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
 # some more ls aliases
-alias ll='ls -l'
+alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 
-# Alias definitions.
-# You may want to put all your additions into a separate file like
-# ~/.bash_aliases, instead of adding them here directly.
-# See /usr/share/doc/bash-doc/examples in the bash-doc package.
-
-if [ -f ~/.bash_aliases ]; then
-    . ~/.bash_aliases
-fi
+# Add an "alert" alias for long running commands.  Use like so:
+#   sleep 10; alert
+alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
@@ -117,23 +102,77 @@ if ! shopt -oq posix; then
   fi
 fi
 
-__contps()
-{
-    if [ "$(which docker)" ] || [ "$(which kubectl)" ]; then
-        if [ -f $HOME/.kube/config ] || [ -f $HOME/.docker/config.json ]; then
-            KUBECC="$HOME/.kube/config"
-            DOCKCC="$HOME/.docker/config.json"
-            k8sco=$(awk '{print $2}'<<< $(grep current-context $KUBECC))
-            swmco=$(awk '{print $2}'<<< $(grep currentContext $DOCKCC) | tr -d '"')
-            echo -e "(k:\e[36m${k8sco:-\e[33m*}\e[0m|s:\e[36m${swmco:-\e[33m*}\e[0m)"
-        fi
-    fi
-}
+# SSH force run and singleton
+if ! pgrep -u "$USER" ssh-agent > /dev/null 2>&1; then
+    ssh-agent > ~/.ssh-agent-status
+fi
+if [[ "$SSH_AGENT_PID" == "" ]]; then
+    eval "$(<~/.ssh-agent-status)"
+fi
 
+# If this is an xterm set more declarative titles 
+# "dir: last_cmd" and "actual_cmd" during execution
+# If you want to exclude a cmd from being printed see line 156
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\$(print_title)\a\]$PS1"
+    __el_LAST_EXECUTED_COMMAND=""
+    print_title () 
+    {
+        __el_FIRSTPART=""
+        __el_SECONDPART=""
+        if [ "$PWD" == "$HOME" ]; then
+            __el_FIRSTPART=$(gettext --domain="pantheon-files" "Home")
+        else
+            if [ "$PWD" == "/" ]; then
+                __el_FIRSTPART="/"
+            else
+                __el_FIRSTPART="${PWD##*/}"
+            fi
+        fi
+        if [[ "$__el_LAST_EXECUTED_COMMAND" == "" ]]; then
+            echo "$__el_FIRSTPART"
+            return
+        fi
+        #trim the command to the first segment and strip sudo
+        if [[ "$__el_LAST_EXECUTED_COMMAND" == sudo* ]]; then
+            __el_SECONDPART="${__el_LAST_EXECUTED_COMMAND:5}"
+            __el_SECONDPART="${__el_SECONDPART%% *}"
+        else
+            __el_SECONDPART="${__el_LAST_EXECUTED_COMMAND%% *}"
+        fi 
+        printf "%s: %s" "$__el_FIRSTPART" "$__el_SECONDPART"
+    }
+    put_title()
+    {
+        __el_LAST_EXECUTED_COMMAND="${BASH_COMMAND}"
+        printf "\033]0;%s\007" "$1"
+    }
+    
+    # Show the currently running command in the terminal title:
+    # http://www.davidpashley.com/articles/xterm-titles-with-bash.html
+    update_tab_command()
+    {
+        # catch blacklisted commands and nested escapes
+        case "$BASH_COMMAND" in 
+            *\033]0*|update_*|echo*|printf*|clear*|cd*)
+            __el_LAST_EXECUTED_COMMAND=""
+                ;;
+            *)
+            put_title "${BASH_COMMAND}"
+            ;;
+        esac
+    }
+    preexec_functions+=(update_tab_command)
+    ;;
+*)
+    ;;
+esac
+
+# Add files to home folder
 for file in ~/.{bash_prompt,aliases}; do
-	if [[ -r "$file" ]] && [[ -f "$file" ]]; then
-		# shellcheck source=/dev/null
-		source "$file"
-	fi
+        if [[ -r "$file" ]] && [[ -f "$file" ]]; then
+                source "$file"
+        fi
 done
 unset file

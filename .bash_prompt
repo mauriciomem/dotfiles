@@ -1,0 +1,22 @@
+#!/bin/bash
+# ~/.bash_prompt - Shell prompt
+# opcional - displays current docker swarm or k8s context
+# vim: set filetype=sh :
+
+# view current context in k8s and docker swarm
+__contps()
+{
+    if [ "$(which docker)" ] || [ "$(which kubectl)" ]; then
+        if [ -f $HOME/.kube/config ] || [ -f $HOME/.docker/config.json ]; then
+            KUBECC="$HOME/.kube/config"
+            DOCKCC="$HOME/.docker/config.json"
+            k8sco=$(awk '{print $2}'<<< $(grep current-context $KUBECC))
+            swmco=$(awk '{print $2}'<<< $(grep currentContext $DOCKCC) | tr -d '"')
+            echo -e "(k:\e[36m${k8sco:-\e[33m*}\e[0m|s:\e[36m${swmco:-\e[33m*}\e[0m)"
+        fi
+    fi
+}
+
+PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u ' # user
+PS1+='\[\033[00m\]at \[\033[01;34m\]\h\[\033[00m\] in ' # server and pwd	
+PS1+='\[\033[01;31m\]\w\[\033[00m\] $(__contps): \n$ ' # current context
