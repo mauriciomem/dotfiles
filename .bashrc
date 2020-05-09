@@ -170,7 +170,7 @@ xterm*|rxvt*)
 esac
 
 # Add files to home folder
-for file in ~/.{bash_prompt,aliases}; do
+for file in ~/.{bash_prompt,bash_aliases}; do
         if [[ -r "$file" ]] && [[ -f "$file" ]]; then
                 source "$file"
         fi
